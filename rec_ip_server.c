@@ -11,15 +11,16 @@ int main(int argc, char **argv) {
     int udpSocket, nBytes, port;
     char *buffer[10]; // buffer that maintains last 10 IP entries
     char *save_last;
-    struct sockaddr_in server_addr;
-    int client_len;
+    char rec_data[120];
+    struct sockaddr_in server_addr, client_addr;
+    int client_len = sizeof(client_addr);
     FILE *fp;
 
     //allocate the buffer and initialise to 0
     for (int i = 0; i < 10; i++) {
         buffer[i] = NULL;
         while (buffer[i] == NULL)
-            buffer[i] = (char *)calloc(120, sizeof(char)); // 120 for safety
+            buffer[i] = (char *)calloc(100, sizeof(char));
     }
 
     // read the port number
@@ -56,11 +57,12 @@ int main(int argc, char **argv) {
             buffer[i] = buffer[i-1];
         buffer[0] = save_last;
 
-        // wait for incoming UDP socket
-        // in case of error, make sure string ends at length 100 (even though
-        // rest of elements to 120 should be calloced to 0)
-        nBytes = recv(udpSocket, buffer[0], 100, 0);
-        buffer[0][99] = '\0';
+        // wait for incoming UDP socket.
+        nBytes = recvfrom(udpSocket, rec_data, 100, 0,
+            (struct sockaddr *) &client_addr, &client_len);
+
+        // get ip of client and copy the ip string in buffer[0]
+        strncpy(buffer[0], inet_ntoa(client_addr.sin_addr), 80);
 
         // keep trying to open file until succeed
         fp = NULL;

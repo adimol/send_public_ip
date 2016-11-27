@@ -10,8 +10,7 @@
 int main(int argc, char **argv) {
     int udpSocket, port;
     struct sockaddr_in server_addr;
-    char buffer[100], server_ip_address[50];
-    FILE *fp;
+    char buffer[100] = "Hi", server_ip_address[50];
 
     // read the server ip and port
     if (argc < 3) {
@@ -30,20 +29,10 @@ int main(int argc, char **argv) {
     server_addr.sin_addr.s_addr = inet_addr(server_ip_address);
     memset(server_addr.sin_zero, '\0', sizeof(server_addr.sin_zero));
 
-    // get the public ip
-    fp = popen("/usr/bin/wget http://ipinfo.io/ip -qO -", "r");
-    if (fgets(buffer, 100, fp) == NULL) {
-        printf("Error in reading public ip");
-        exit(1);
-    }
-
-    int n = sendto(udpSocket, buffer, 100, 0, (struct sockaddr *)&server_addr,
-        sizeof(server_addr));
+    int n = sendto(udpSocket, buffer, strlen(buffer) + 1, 0,
+        (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     if (n < 0)
         printf("Error in sendto\n");
-
-    fclose(fp);
-
 
 }
