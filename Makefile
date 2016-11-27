@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -O2 -g
+CFLAGS= -O2 -g -std=c11
 
 all : send_ip_client rec_ip_server
 
