@@ -9,10 +9,18 @@
 
 int main(int argc, char **argv) {
     int udpSocket, nBytes, port;
-    char buffer[100];
+    char *buffer[10]; // buffer that maintains last 10 IP entries
+    char *save_last;
     struct sockaddr_in server_addr;
     int client_len;
     FILE *fp;
+
+    //allocate the buffer and initialise to 0
+    for (int i = 0; i < 10; i++) {
+        buffer[i] = NULL;
+        while (buffer[i] == NULL)
+            buffer[i] = (char *)calloc(120, sizeof(char)); // 120 for safety
+    }
 
     // read the port number
     if (argc < 2) {
@@ -31,9 +39,8 @@ int main(int argc, char **argv) {
     memset(server_addr.sin_zero, '\0', sizeof server_addr.sin_zero);
 
     // if socket already in use by kernel (previously opened), force re-use
-    int yes=1;
-    if (setsockopt(udpSocket,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof yes) == -1)
-    {
+    int yes = 1;
+    if (setsockopt(udpSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
         perror("setsockopt");
         exit(1);
     }
@@ -42,13 +49,29 @@ int main(int argc, char **argv) {
     bind(udpSocket, (struct sockaddr *) &server_addr, sizeof(server_addr));
 
     while(1) {
-        nBytes = recv(udpSocket,buffer,100,0);
-        fp = fopen("out_ip", "w");
-        if (fp == NULL)
-            exit(1);
+        // shift (rotate) elements of array to right, allowing a new string on pos 0;
+        // first element becomes the previous last element
+        save_last = buffer[9];
+        for (int i = 9; i >= 1; i--)
+            buffer[i] = buffer[i-1];
+        buffer[0] = save_last;
 
-        fprintf(fp, "%s\n", buffer);
+        // wait for incoming UDP socket
+        // in case of error, make sure string ends at length 100 (even though
+        // rest of elements to 120 should be calloced to 0)
+        nBytes = recv(udpSocket, buffer[0], 100, 0);
+        buffer[0][99] = '\0';
+
+        // keep trying to open file until succeed
+        fp = NULL;
+        while (fp == NULL)
+            fp = fopen("out_ip", "w");
+
+        // write contents to file
+        fprintf(fp, "%s\n\n", "Bellow are the latest 10 ips, first is most recent");
+        for (int i = 0; i < 10; i++)
+            fprintf(fp, "%s\n", buffer[i]);
+
         fclose(fp);
-        // printf("%s\n", buffer); // test by printing buffer in console
     }
 }
